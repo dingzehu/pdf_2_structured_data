@@ -1,0 +1,31 @@
+from datetime import date, datetime
+
+from sqlalchemy import JSON, DateTime, Float, String, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+class Base(DeclarativeBase):
+    """Shared declarative base — all ORM models inherit from this."""
+
+
+class ExtractionRecord(Base):
+    """Database table storing one row per processed PDF."""
+
+    __tablename__ = "extraction_records"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    filename: Mapped[str] = mapped_column(String(255))
+    document_type: Mapped[str] = mapped_column(String(100))
+    issuer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    recipient_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    document_date: Mapped[date | None] = mapped_column(nullable=True)
+    document_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    total_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # line_items stored as JSON array — avoids a separate join table for a portfolio project.
+    line_items: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    summary: Mapped[str] = mapped_column(String(2000))
+    raw_confidence: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
