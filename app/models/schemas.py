@@ -31,10 +31,10 @@ class ExtractedDocument(BaseModel):
     summary: str
     raw_confidence: float
 
-    @field_validator("currency")
-    @classmethod
+    @field_validator("currency")  # runs after Pydantic parses the field value
+    @classmethod  # required by Pydantic v2 - validators must be class methods
     def uppercase_currency(cls, v: str | None) -> str | None:
-        return v.upper() if v else v
+        return v.upper() if v else v  # if v is None, return None (don't call .upper() on None)
 
 
 class ExtractionResponse(BaseModel):
