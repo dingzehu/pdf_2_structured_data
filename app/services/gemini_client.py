@@ -6,17 +6,19 @@ from app.config import settings
 from app.models.schemas import ExtractedDocument
 
 
-# _client uses google-genai's newer SDK style: genai.Client(api_key=...), not google-generativeai
+# uses google-genai SDK style: genai.Client(api_key=...), not google-generativeai
 class GeminiClient:
     """Wraps the Google Gemini API to extract structured data from document text."""
 
     def __init__(self) -> None:
-        self._client = genai.Client(api_key=settings.gemini_api_key)  # one client instance reused for all calls
+        # one client instance reused for all calls
+        self._client = genai.Client(api_key=settings.gemini_api_key)
         self._model = settings.gemini_model
-        self._schema_json = json.dumps(  # pre-compute schema once; injected into every prompt
+        # pre-compute schema once; injected into every prompt
+        self._schema_json = json.dumps(
             ExtractedDocument.model_json_schema(), indent=2
-            )
-    
+        )
+
     async def extract_document(self, document_text: str) -> ExtractedDocument:
         """Send document text to Gemini and return a validated ExtractedDocument."""
         prompt = (
@@ -30,9 +32,12 @@ class GeminiClient:
             "how complete and clear the document data was.\n\n"
             f"DOCUMENT TEXT:\n{document_text}"
         )
-        response = await self._client.aio.models.generate_content(  # .aio = async I/O namespace of the SDK
+        # .aio = async I/O namespace of the SDK
+        response = await self._client.aio.models.generate_content(
             model=self._model,
             contents=prompt,
         )
-        data = json.loads(response.text)  # response.text is the raw JSON string Gemini returned
-        return ExtractedDocument.model_validate(data)  # raises ValidationError if Gemini returned wrong shape
+        # response.text is the raw JSON string Gemini returned
+        data = json.loads(response.text)
+        # raises ValidationError if Gemini returned wrong shape
+        return ExtractedDocument.model_validate(data)

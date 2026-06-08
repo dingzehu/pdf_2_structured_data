@@ -11,8 +11,9 @@ from app.models.db import Base
 async def lifespan(app: FastAPI):
     """Create database tables on startup."""
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)  # create_all is sync - run_sync bridges it into async
-    yield
+        # create_all is sync - run_sync bridges it into async
+        await conn.run_sync(Base.metadata.create_all)
+    yield  # startup done - lifespan pauses here while the server handles requests
 
 
 app = FastAPI(

@@ -17,17 +17,21 @@ from app.services.pipeline import run_pipeline
 router = APIRouter()
 
 
-@router.post("/extract", response_model=ExtractionResponse, status_code=201)  # 201 Created, not 200 OK
+# 201 Created, not 200 OK
+@router.post("/extract", response_model=ExtractionResponse, status_code=201)
 async def extract_pdf(
-    file: UploadFile = File(...),  # File(...) means the upload field is required
-    db: AsyncSession = Depends(get_db),  # FastAPI calls get_db() and injects the session automatically
+    # File(...) means the upload field is required
+    file: UploadFile = File(...),
+    # FastAPI calls get_db() and injects the session automatically
+    db: AsyncSession = Depends(get_db),
 ) -> ExtractionResponse:
     """Accept a PDF upload and run the full extraction pipeline."""
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=422, detail="Uploaded file must be a PDF.")
-    file_bytes = await file.read()
+    file_bytes = await file.read()  # all PDF bytes read into RAM as a bytes object
     try:
-        return await run_pipeline(file_bytes, file.filename or "unknown.pdf", db)  # or "unknown.pdf" handles None filename
+        # or "unknown.pdf" handles None filename
+        return await run_pipeline(file_bytes, file.filename or "unknown.pdf", db)
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
     except Exception as exc:
@@ -48,8 +52,10 @@ async def get_result(
 
 @router.get("/results", response_model=PaginatedResultsResponse)
 async def list_results(
-    page: int = Query(1, ge=1),  # ge=1 means minimum value is 1- validated automatically
-    size: int = Query(10, ge=1, le=100),  # le=100 caps page size to prevent huge DB queries
+    # ge=1 means minimum value is 1 - validated automatically
+    page: int = Query(1, ge=1),
+    # le=100 caps page size to prevent huge DB queries
+    size: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResultsResponse:
     """Return a paginated list of all past extractions, newest first."""
@@ -78,11 +84,13 @@ async def list_results(
 async def health_check(db: AsyncSession = Depends(get_db)) -> HealthResponse:
     """Check database connectivity and return service status."""
     try:
-        await db.execute(select(1))  # cheapest possible query - just check DB is reachable
+        # cheapest possible query - just check DB is reachable
+        await db.execute(select(1))
         db_status = "connected"
     except Exception:
         db_status = "error"
-    return HealthResponse(status="ok", db=db_status, gemini="reachable")  # gemini hardcoded - no live API check
+    # gemini hardcoded - no live API check
+    return HealthResponse(status="ok", db=db_status, gemini="reachable")
 
 
 def _record_to_response(record: ExtractionRecord) -> ExtractionResponse:
@@ -95,7 +103,8 @@ def _record_to_response(record: ExtractionRecord) -> ExtractionResponse:
         document_number=record.document_number,
         total_amount=record.total_amount,
         currency=record.currency,
-        line_items=[LineItem(**item) for item in (record.line_items or [])],  # or [] guards against NULL in DB
+        # or [] guards against NULL in DB
+        line_items=[LineItem(**item) for item in (record.line_items or [])],
         summary=record.summary,
         raw_confidence=record.raw_confidence,
     )
