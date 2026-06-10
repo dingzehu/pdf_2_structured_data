@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str
     database_url: str = "postgresql+asyncpg://postgres:password@db:5432/pdf_extractions"
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
 
 # lru_cache makes Settings() a singleton - the .env file is read exactly once.
