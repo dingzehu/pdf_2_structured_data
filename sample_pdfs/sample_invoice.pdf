@@ -1,0 +1,60 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Courier >> >> >> >>
+endobj
+4 0 obj
+<< /Length 908 >>
+stream
+BT
+/F1 11 Tf
+50 750 Td
+14 TL
+(INVOICE) Tj T*
+() Tj T*
+(Invoice Number: INV-2024-001) Tj T*
+(Date: 2024-01-15) Tj T*
+(Due Date: 2024-02-15) Tj T*
+() Tj T*
+(FROM:) Tj T*
+(Acme Corporation) Tj T*
+(123 Business Street) Tj T*
+(New York, NY 10001) Tj T*
+() Tj T*
+(TO:) Tj T*
+(John Doe) Tj T*
+(456 Client Avenue) Tj T*
+(Los Angeles, CA 90001) Tj T*
+() Tj T*
+(ITEMS:) Tj T*
+(Description                   Qty   Unit Price      Total) Tj T*
+(Python Development Services    10      150.00      1500.00) Tj T*
+(Code Review                     5       80.00       400.00) Tj T*
+(Technical Documentation         3      100.00       300.00) Tj T*
+() Tj T*
+(SUBTOTAL:                                          2200.00) Tj T*
+(TAX \(10%\):                                          220.00) Tj T*
+(TOTAL DUE:                                         2420.00) Tj T*
+() Tj T*
+(Currency: USD) Tj T*
+(Payment Terms: Net 30) Tj T*
+ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000288 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+1247
+%%EOF
