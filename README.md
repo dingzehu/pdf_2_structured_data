@@ -1,44 +1,63 @@
 # pdf-to-structured-data
 
-A production-ready ETL pipeline that extracts structured data from PDF documents
-using Google Gemini AI, validates the output with Pydantic v2, stores results in
-PostgreSQL, and exposes the whole pipeline as a REST API — all runnable with a
-single `docker compose up` command.
+> Production-ready ETL pipeline extracting structured data from PDFs using Gemini AI, FastAPI, Pydantic v2, PostgreSQL, and Docker Compose.
+
+![CI](https://github.com/dingzehu/pdf-to-structured-data/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+---
+
+## What it does
+
+Upload any text-based PDF — invoice, contract, report — and the pipeline extracts structured fields using Google Gemini AI, validates the output strictly with Pydantic v2, and stores the result in PostgreSQL. The entire stack starts with one command.
+
+```bash
+curl -X POST http://localhost:8000/extract \
+  -F "file=@invoice.pdf"
+```
+
+```json
+{
+  "record_id": 1,
+  "extraction": {
+    "document_type": "invoice",
+    "issuer_name": "Acme Corp",
+    "total_amount": 1500.00,
+    "currency": "USD",
+    "raw_confidence": 0.97
+  }
+}
+```
 
 ---
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                        CLIENT                           │
-│               POST /extract  (PDF file)                 │
-└───────────────────────┬─────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│                  FASTAPI  (port 8000)                   │
-│                                                         │
-│  routes.py ──► pipeline.py                              │
-│                    │                                    │
-│           ┌────────┴────────┐                           │
-│           ▼                 ▼                           │
-│  pdf_extractor.py    gemini_client.py                   │
-│  (pdfplumber)        (google-genai)                     │
-│           │                 │                           │
-│           │   raw text      │   structured JSON         │
-│           └────────┬────────┘                           │
-│                    ▼                                    │
-│            Pydantic v2  (validate + type-check)         │
-│                    │                                    │
-│            SQLAlchemy 2.0  (async write)                │
-└────────────────────┼────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│              POSTGRESQL 16  (port 5432)                 │
-│              table: extraction_records                  │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Client(["📄 Client\ncurl / browser / app"])
+
+    subgraph docker["Docker Compose"]
+        FastAPI["⚡ FastAPI\n:8000"]
+
+        subgraph pipeline["Pipeline"]
+            extractor["pdf_extractor.py\npdfplumber"]
+            gemini["gemini_client.py\ngoogle-genai"]
+            pydantic["Pydantic v2\nvalidation"]
+            orm["SQLAlchemy 2.0 async\npersistence"]
+        end
+
+        PG[("🗄️ PostgreSQL 16\n:5432")]
+    end
+
+    Client -->|"POST /extract (PDF)"| FastAPI
+    FastAPI --> extractor
+    extractor -->|"raw text"| gemini
+    gemini -->|"structured JSON"| pydantic
+    pydantic --> orm
+    orm --> PG
+    FastAPI -->|"201 + structured data"| Client
 ```
 
 ---
@@ -46,13 +65,13 @@ single `docker compose up` command.
 ## Features
 
 - **PDF ingestion** — accepts any text-based PDF via multipart upload
-- **LLM extraction** — Google Gemini 2.0 Flash extracts 10 structured fields
-- **Strict validation** — Pydantic v2 rejects malformed or incomplete LLM output
-- **Async persistence** — SQLAlchemy 2.0 async ORM writes results to PostgreSQL
+- **LLM extraction** — Gemini 2.5 Flash extracts 10 structured fields per document
+- **Strict validation** — Pydantic v2 rejects malformed LLM output before it reaches the database
+- **Async persistence** — SQLAlchemy 2.0 async ORM writes to PostgreSQL without blocking
 - **REST API** — four endpoints: extract, retrieve by ID, paginated list, health check
-- **One-command deploy** — Docker Compose orchestrates API + database with health checks
-- **Full test suite** — pytest with async fixtures, mocked Gemini, real DB integration tests
-- **CI/CD** — GitHub Actions runs linting and tests on every push
+- **One-command deploy** — Docker Compose orchestrates API and database with health checks
+- **Full test suite** — pytest with async fixtures and mocked Gemini API
+- **CI/CD** — GitHub Actions runs ruff and pytest on every push
 
 ---
 
@@ -62,10 +81,10 @@ single `docker compose up` command.
 |---|---|
 | Language | Python 3.12 |
 | API framework | FastAPI + Uvicorn |
-| LLM | Google Gemini 2.0 Flash (`google-genai`) |
+| LLM | Google Gemini 2.5 Flash (`google-genai`) |
 | PDF parsing | pdfplumber |
 | Validation | Pydantic v2 |
-| ORM | SQLAlchemy 2.0 (async) |
+| ORM | SQLAlchemy 2.0 async |
 | Database | PostgreSQL 16 |
 | Containers | Docker + Docker Compose |
 | Testing | pytest + pytest-asyncio + httpx |
@@ -73,63 +92,29 @@ single `docker compose up` command.
 
 ---
 
-## Project Structure
+## Quick Start
 
-```
-pdf-to-structured-data/
-├── app/
-│   ├── main.py              # FastAPI app factory + lifespan
-│   ├── config.py            # Settings via pydantic-settings
-│   ├── database.py          # Async engine + session factory
-│   ├── models/
-│   │   ├── db.py            # SQLAlchemy ORM models
-│   │   └── schemas.py       # Pydantic v2 request/response models
-│   ├── services/
-│   │   ├── pdf_extractor.py # pdfplumber text extraction
-│   │   ├── gemini_client.py # Google Gemini API client
-│   │   └── pipeline.py      # Orchestration: PDF → LLM → DB
-│   └── api/
-│       └── routes.py        # FastAPI route handlers
-├── tests/                   # pytest suite (unit + integration)
-├── sample_pdfs/             # synthetic test PDFs
-├── Dockerfile
-├── docker-compose.yml
-├── pyproject.toml
-└── .env.example
-```
-
----
-
-## Quickstart
-
-### Prerequisites
-
-- Docker + Docker Compose
-- A [Google Gemini API key](https://aistudio.google.com/app/apikey)
-
-### 1. Clone and configure
+**Prerequisites:** Docker Desktop, a free [Gemini API key](https://aistudio.google.com/apikey)
 
 ```bash
-git clone https://github.com/your-username/pdf-to-structured-data.git
+# 1. Clone and configure
+git clone https://github.com/dingzehu/pdf-to-structured-data.git
 cd pdf-to-structured-data
 cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
-```
+# Open .env and add your GEMINI_API_KEY
 
-### 2. Start the stack
-
-```bash
+# 2. Start the stack
 docker compose up --build
-```
 
-The API is now available at `http://localhost:8000`.
-
-### 3. Extract data from a PDF
-
-```bash
+# 3. Extract data from a PDF
 curl -X POST http://localhost:8000/extract \
   -F "file=@sample_pdfs/sample_invoice.pdf"
 ```
+
+| URL | What you see |
+|---|---|
+| http://localhost:8000/docs | Interactive API (Swagger UI) |
+| http://localhost:8000/health | Health check |
 
 ---
 
@@ -158,8 +143,8 @@ Upload a PDF and receive structured extracted data.
       {
         "description": "Consulting",
         "quantity": 10,
-        "unit_price": 150.0,
-        "total": 1500.0
+        "unit_price": 150.00,
+        "total": 1500.00
       }
     ],
     "summary": "Invoice from Acme Corp to John Doe for consulting services.",
@@ -169,7 +154,7 @@ Upload a PDF and receive structured extracted data.
 }
 ```
 
-**Errors:** `422` if validation fails, `500` if Gemini is unavailable.
+**Errors:** `422` if Pydantic validation fails · `500` if Gemini is unavailable
 
 ---
 
@@ -177,7 +162,7 @@ Upload a PDF and receive structured extracted data.
 
 Retrieve a stored extraction by database ID.
 
-**Response `200`:** same schema as `POST /extract`  
+**Response `200`:** same schema as `POST /extract`
 **Response `404`:** record not found
 
 ---
@@ -200,8 +185,6 @@ Paginated list of all past extractions, newest first.
 
 ### `GET /health`
 
-Service health check.
-
 **Response `200`:**
 ```json
 { "status": "ok", "db": "connected", "gemini": "reachable" }
@@ -209,36 +192,72 @@ Service health check.
 
 ---
 
-## Running Tests
+## Project Structure
 
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run all tests with coverage
-pytest --cov=app tests/
-
-# Run linter
-ruff check .
+```
+pdf-to-structured-data/
+├── app/
+│   ├── main.py              # FastAPI app factory + lifespan
+│   ├── config.py            # Settings via pydantic-settings
+│   ├── database.py          # Async engine + session factory
+│   ├── models/
+│   │   ├── db.py            # SQLAlchemy ORM model
+│   │   └── schemas.py       # Pydantic v2 request/response schemas
+│   ├── services/
+│   │   ├── pdf_extractor.py # pdfplumber: PDF → raw text
+│   │   ├── gemini_client.py # Gemini API: text → structured JSON
+│   │   └── pipeline.py      # Orchestration: PDF → LLM → DB
+│   └── api/
+│       └── routes.py        # FastAPI route handlers
+├── tests/                   # pytest unit + integration tests
+├── sample_pdfs/             # synthetic test PDFs
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+└── .env.example
 ```
 
-> **Note:** Integration tests require a running PostgreSQL instance.
-> Set `DATABASE_URL` in `.env` to point at your test database.
+---
+
+## Development
+
+```bash
+# Install dependencies
+pip install -e ".[dev]"
+
+# Run all tests (all external calls are mocked — no API key needed)
+pytest tests/ -v
+
+# Coverage report
+pytest tests/ --cov=app --cov-report=term-missing
+
+# Lint
+ruff check .
+```
 
 ---
 
 ## Environment Variables
 
-| Variable | Default | Description |
+| Variable | Required | Description |
 |---|---|---|
-| `GEMINI_API_KEY` | *(required)* | Your Google Gemini API key |
-| `DATABASE_URL` | `postgresql+asyncpg://postgres:password@db:5432/pdf_extractions` | PostgreSQL connection string |
-| `GEMINI_MODEL` | `gemini-2.0-flash` | Gemini model name |
+| `GEMINI_API_KEY` | Yes | Get one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `DATABASE_URL` | No | PostgreSQL connection string — defaults to the Docker Compose service |
+| `GEMINI_MODEL` | No | Defaults to `gemini-2.5-flash` |
 
-See `.env.example` for the full template.
+See [`.env.example`](.env.example) for the full template.
+
+---
+
+## Design decisions
+
+- **FastAPI over Flask or Django REST** — async-first design means Gemini API calls do not block the worker; native Pydantic v2 integration handles request/response validation; automatic `/docs` requires no extra documentation work.
+- **Pydantic v2 strict validation** — LLM output is unpredictable. Gemini occasionally omits fields, returns wrong types, or wraps JSON in markdown fences. Pydantic v2 rejects non-conforming output before it reaches the database, making the pipeline deterministic regardless of model variance.
+- **SQLAlchemy 2.0 async** — non-blocking database writes allow FastAPI to serve concurrent requests while PostgreSQL commits a record; `Mapped[]` type annotations provide full IDE inference without duplicate column definitions.
+- **pdfplumber over PyMuPDF or PyPDF2** — most accurate text extraction for text-based PDFs, cleaner whitespace handling, and better table structure preservation for downstream LLM prompting. **Limitation:** pdfplumber cannot extract text from scanned PDFs (image-only pages return an empty string). To handle scanned documents, the pipeline would need an OCR step (e.g. `pytesseract`) or the PDF would need to be sent directly to Gemini as a file upload.
 
 ---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
