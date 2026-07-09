@@ -4,6 +4,7 @@
 
 ![CI](https://github.com/dingzehu/pdf-to-structured-data/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
